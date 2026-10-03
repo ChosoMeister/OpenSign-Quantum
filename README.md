@@ -43,7 +43,7 @@ docker compose -f docker-compose.yml -f docker-compose.sso.yml up -d --build
 
 | Document | Purpose |
 |---|---|
-| [docs/SSO-RUNBOOK.md](docs/SSO-RUNBOOK.md) | Step-by-step deployment, verification, operations, troubleshooting |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Full runbook: Docker deployment, SSO setup, backup/update, troubleshooting |
 | [docs/SSO.md](docs/SSO.md) | Architecture, all configuration options, security model |
 | [docs/sso-test-env/](docs/sso-test-env/README.md) | Local test environments (Keycloak, mock OIDC, SimpleSAMLphp) |
 

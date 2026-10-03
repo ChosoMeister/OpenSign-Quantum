@@ -3,7 +3,7 @@
 # its SSO settings from .env.sso. The client never receives .env.sso, so SSO secrets
 # stay in the backend container only.
 #
-#   cp .env.sso.example .env.sso   # fill in, see docs/SSO-RUNBOOK.md
+#   cp .env.sso.example .env.sso   # fill in, see docs/RUNBOOK.md
 #   docker compose -f docker-compose.yml -f docker-compose.sso.yml up -d --build
 services:
   server:

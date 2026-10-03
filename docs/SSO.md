@@ -223,7 +223,7 @@ cp .env.sso.example .env.sso   # fill in
 docker compose -f docker-compose.yml -f docker-compose.sso.yml up -d --build
 ```
 
-Step-by-step deployment instructions are in [SSO-RUNBOOK.md](SSO-RUNBOOK.md).
+Step-by-step deployment instructions are in [RUNBOOK.md](RUNBOOK.md).
 
 ## Testing
 
