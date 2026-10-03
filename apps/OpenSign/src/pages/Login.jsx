@@ -21,6 +21,12 @@ import {
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import SelectLanguage from "../components/pdf/SelectLanguage";
+import {
+  exchangeSsoCode,
+  fetchSsoConfig,
+  startSsoLogin,
+  takeSsoParams
+} from "../utils/sso";
 
 function Login() {
   const appName =
@@ -46,13 +52,42 @@ function Login() {
   const [isModal, setIsModal] = useState(false);
   const [image, setImage] = useState();
   const [errMsg, setErrMsg] = useState();
+  const [ssoConfig, setSsoConfig] = useState({ enabled: false });
+  // SSO errors stay visible (unlike the 2s toast) because they often need admin action.
+  const [ssoError, setSsoError] = useState("");
   useEffect(() => {
     handleUserExist();
     // eslint-disable-next-line
   }, []);
 
   const handleUserExist = async () => {
-    checkUserExt();
+    // OpenSign-Quantum SSO: returning from the IdP with a one-time code or an error code.
+    const sso = takeSsoParams();
+    fetchSsoConfig().then(setSsoConfig);
+    if (sso.code) {
+      localStorage.removeItem("accesstoken");
+    }
+    await checkUserExt();
+    if (sso.code) {
+      handleSsoCode(sso.code);
+    } else if (sso.error) {
+      setSsoError(
+        t(`sso-error.${sso.error}`, { defaultValue: t("sso-error.default") })
+      );
+    }
+  };
+
+  const handleSsoCode = async (code) => {
+    setThirdpartyLoader(true);
+    try {
+      localStorage.setItem("appLogo", appInfo.applogo);
+      const sessionToken = await exchangeSsoCode(code);
+      await thirdpartyLoginfn(sessionToken);
+    } catch (error) {
+      console.error("SSO login failed", error?.message);
+      setThirdpartyLoader(false);
+      setSsoError(t("sso-error.default"));
+    }
   };
 
 
@@ -442,6 +477,35 @@ function Login() {
                 <div>
                   <form onSubmit={handleLoginBtn} aria-label="Login Form">
                     <h1 className="text-[30px] mt-6">{t("welcome")}</h1>
+                    {ssoConfig?.enabled && (
+                      <div className="my-3">
+                        <button
+                          type="button"
+                          className="op-btn op-btn-primary w-full text-xs font-bold"
+                          onClick={() => {
+                            setSsoError("");
+                            startSsoLogin();
+                          }}
+                          disabled={state.loading || state.thirdpartyLoader}
+                        >
+                          {/^sign in/i.test(ssoConfig.displayName || "")
+                            ? ssoConfig.displayName
+                            : t("sso-sign-in", {
+                                name: ssoConfig.displayName || "SSO"
+                              })}
+                        </button>
+                        {ssoError && (
+                          <Alert type="danger" className="mt-2 text-xs">
+                            {ssoError}
+                          </Alert>
+                        )}
+                        <div className="flex items-center gap-2 mt-3 text-[12px] text-[#878787]">
+                          <hr className="flex-1" />
+                          {t("sso-or")}
+                          <hr className="flex-1" />
+                        </div>
+                      </div>
+                    )}
                     <fieldset>
                       <legend className="text-[12px] text-[#878787]">
                         {t("Login-to-your-account")}

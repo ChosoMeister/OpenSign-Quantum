@@ -15,9 +15,13 @@ import { app as customRoute } from './cloud/customRoute/customApp.js';
 import { exec } from 'child_process';
 import { createTransport } from 'nodemailer';
 import { appName, cloudServerUrl, serverAppId, smtpenable, smtpsecure, useLocal } from './Utils.js';
-import { SSOAuth } from './auth/authadapter.js';
+import { loadSsoConfig } from './auth/sso/config.js';
+import { createSsoRouter } from './auth/sso/routes.js';
+import { parseStore, ensureSsoSchemas, SSO_USER_FIELDS } from './auth/sso/store.js';
 import runDbMigrations from './migrationdb/index.js';
 import { validateSignedLocalUrl } from './cloud/parsefunction/getSignedUrl.js';
+// OpenSign-Quantum SSO: fail fast on invalid configuration.
+export const ssoConfig = loadSsoConfig();
 let fsAdapter;
 
 if (useLocal !== 'true') {
@@ -158,7 +162,9 @@ export const config = {
       }
     : {}),
   filesAdapter: fsAdapter,
-  auth: { google: { clientId: process.env.GOOGLE_CLIENT_ID }, sso: SSOAuth },
+  auth: { google: { clientId: process.env.GOOGLE_CLIENT_ID } },
+  // Keep Parse's default protection of email and hide the SSO identity binding from clients.
+  protectedFields: { _User: { '*': ['email', ...SSO_USER_FIELDS] } },
   // for fix Adapter prototype don't match expected prototype
   push: { queueOptions: { disablePushWorker: true } },
 };
@@ -220,11 +226,14 @@ if (!process.env.TESTING) {
     const server = new ParseServer(config);
     await server.start();
     app.use(mountPath, server.app);
+    if (ssoConfig.enabled) await ensureSsoSchemas();
   } catch (err) {
     console.log(err);
     process.exit();
   }
 }
+// OpenSign-Quantum SSO routes (/auth/sso/*, /auth/oidc/*, /auth/saml/*)
+app.use('/auth', createSsoRouter({ config: ssoConfig, store: parseStore }));
 // Mount your custom express app
 app.use('/', customRoute);
 

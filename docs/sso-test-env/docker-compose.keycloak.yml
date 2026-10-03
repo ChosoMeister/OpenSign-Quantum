@@ -1,0 +1,17 @@
+# OpenSign-Quantum test environment with Keycloak (OIDC and SAML) + MongoDB.
+# Keycloak admin console: http://localhost:8180 (admin / admin, test only).
+# After `up`, run ./keycloak-setup.sh to create the realm, clients and test user.
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: start-dev --http-port=8180
+    ports:
+      - "8180:8180"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27018:27017"

@@ -24,6 +24,29 @@
   <a href="https://www.linkedin.com/company/opensign%E2%84%A2/about/">LinkedIn</a>
 
 
+## OpenSign-Quantum: Enterprise SSO
+
+This fork adds vendor-neutral **Single Sign-On** to self-hosted OpenSign. Everything else stays as upstream.
+
+- **Protocols:** OpenID Connect or SAML 2.0, against any standards-compliant IdP (Keycloak, Entra ID, Okta, ADFS, Authentik and others). It does not depend on any OpenSignLabs-hosted service.
+- **Provisioning:** SSO users are created on first login as standard users (`contracts_User`). The IdP never grants admin rights.
+- **Local login:** email/password login stays available for administrators and as break-glass access.
+- **Off switch:** `SSO_ENABLED=false` (the default) gives upstream behaviour.
+
+**Quick start**
+```bash
+export HOST_URL=https://sign.example.com
+cp .env.local_dev .env.prod        # base OpenSign settings
+cp .env.sso.example .env.sso       # SSO settings (server only, never committed)
+docker compose -f docker-compose.yml -f docker-compose.sso.yml up -d --build
+```
+
+| Document | Purpose |
+|---|---|
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Full runbook: Docker deployment, SSO setup, backup/update, troubleshooting |
+| [docs/SSO.md](docs/SSO.md) | Architecture, all configuration options, security model |
+| [docs/sso-test-env/](docs/sso-test-env/README.md) | Local test environments (Keycloak, mock OIDC, SimpleSAMLphp) |
+
 ## The premier open source document signing solution(DocuSign alternative)
 
 ---

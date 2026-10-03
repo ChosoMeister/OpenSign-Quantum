@@ -13,6 +13,14 @@ services:
       - NODE_ENV=production
       - SERVER_URL=${HOST_URL:-https://localhost:3001}/api/app
       - PUBLIC_URL=${HOST_URL:-https://localhost:3001}
+      # OpenSign-Quantum SSO (docs/SSO.md). Keep secrets in .env.prod or a secret store.
+      # - SSO_ENABLED=true
+      # - SSO_PROTOCOL=oidc
+      # - SSO_DISPLAY_NAME=Company SSO
+      # - OIDC_ISSUER=${OIDC_ISSUER}
+      # - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
+      # - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+      # - OIDC_REDIRECT_URI=${HOST_URL:-https://localhost:3001}/api/auth/oidc/callback
     networks:
       - app-network
   mongo:

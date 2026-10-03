@@ -1613,5 +1613,19 @@
   "access-code-upgrade-msg": "Access codes are available on paid plans only. Upgrade your plan to add access codes for recipients.",
   "show-access-code": "Show access code",
   "hide-access-code": "Hide access code",
-  "already-copied-to-clipboard": "Already copied to clipboard"
+  "already-copied-to-clipboard": "Already copied to clipboard",
+  "sso-sign-in": "Sign in with {{name}}",
+  "sso-or": "OR",
+  "sso-error": {
+    "default": "Single Sign-On failed. Please try again or contact the OpenSign administrator.",
+    "ACCOUNT_COLLISION": "An account with this email already exists. Please contact the OpenSign administrator to migrate or link this account.",
+    "USER_DISABLED": "Your OpenSign account is disabled. Please contact the OpenSign administrator.",
+    "PROVISIONING_DISABLED": "Your account has not been set up in OpenSign yet. Please contact the OpenSign administrator.",
+    "MISSING_EMAIL": "Your identity provider did not supply an email address. Please contact your administrator.",
+    "UNVERIFIED_EMAIL": "Your email address is not verified at your identity provider.",
+    "PROVIDER_UNAVAILABLE": "The Single Sign-On provider is currently unavailable. Please try again later.",
+    "INVALID_STATE": "Your sign-in session expired or is invalid. Please try again.",
+    "VALIDATION_FAILED": "Single Sign-On could not be verified. Please try again.",
+    "SSO_DISABLED": "Single Sign-On is not enabled."
+  }
 }

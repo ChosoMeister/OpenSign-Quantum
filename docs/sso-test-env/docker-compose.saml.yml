@@ -1,0 +1,17 @@
+# OpenSign-Quantum SAML test environment: MongoDB + a generic SAML IdP.
+# The IdP is SimpleSAMLphp (kenchan0130/simplesamlphp). Test users: user1/password, user2/password.
+# Run the OpenSign server on the host with the matching env file (README.md).
+services:
+  saml-idp:
+    image: kenchan0130/simplesamlphp:1.19.9
+    ports:
+      - "8081:8080"
+    environment:
+      SIMPLESAMLPHP_SP_ENTITY_ID: http://localhost:8080
+      SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: http://localhost:8080/auth/saml/callback
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27018:27017"
+

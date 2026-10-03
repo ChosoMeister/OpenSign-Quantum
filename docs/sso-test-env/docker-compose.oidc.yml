@@ -1,0 +1,21 @@
+# OpenSign-Quantum OIDC test environment: MongoDB + a generic OIDC provider.
+# The provider is navikt/mock-oauth2-server (vendor-neutral, standards-based test IdP).
+# Run the OpenSign server on the host with the matching env file (README.md).
+services:
+  oidc-idp:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    ports:
+      - "9090:9090"
+    environment:
+      SERVER_PORT: "9090"
+      JSON_CONFIG: >
+        {"interactiveLogin": true, "tokenCallbacks": [{"issuerId": "company",
+        "requestMappings": [{"requestParam": "scope", "match": "*",
+        "claims": {"sub": "$${login}", "email": "$${login}@example.com", "email_verified": true,
+        "name": "Test $${login}", "aud": ["opensign"]}}]}]}
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27018:27017"
+

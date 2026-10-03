@@ -44,6 +44,75 @@ async function saveUser(userDetails) {
     return { id: res.id, sessionToken: res.getSessionToken() };
   }
 }
+// Shared with SSO provisioning (auth/sso/userProvisioning.js).
+export async function createTenantAndExtUser(userId, userDetails) {
+  const extClass = userDetails.role.split('_')[0];
+  const partnerCls = Parse.Object.extend('partners_Tenant');
+  const partnerQuery = new partnerCls();
+  partnerQuery.set('UserId', {
+    __type: 'Pointer',
+    className: '_User',
+    objectId: userId,
+  });
+
+  if (userDetails?.phone) {
+    partnerQuery.set('ContactNumber', userDetails.phone);
+  }
+  partnerQuery.set('TenantName', userDetails.company);
+  partnerQuery.set('EmailAddress', userDetails?.email?.toLowerCase()?.replace(/\s/g, ''));
+  partnerQuery.set('IsActive', true);
+  partnerQuery.set('CreatedBy', {
+    __type: 'Pointer',
+    className: '_User',
+    objectId: userId,
+  });
+  if (userDetails && userDetails.pincode) {
+    partnerQuery.set('PinCode', userDetails.pincode);
+  }
+  if (userDetails && userDetails.country) {
+    partnerQuery.set('Country', userDetails.country);
+  }
+  if (userDetails && userDetails.state) {
+    partnerQuery.set('State', userDetails.state);
+  }
+  if (userDetails && userDetails.city) {
+    partnerQuery.set('City', userDetails.city);
+  }
+  if (userDetails && userDetails.address) {
+    partnerQuery.set('Address', userDetails.address);
+  }
+  const tenantRes = await partnerQuery.save(null, { useMasterKey: true });
+  // console.log("tenantRes ", tenantRes);
+  const extCls = Parse.Object.extend(extClass + '_Users');
+  const newObj = new extCls();
+  newObj.set('UserId', {
+    __type: 'Pointer',
+    className: '_User',
+    objectId: userId,
+  });
+  newObj.set('UserRole', userDetails.role);
+  newObj.set('Email', userDetails?.email?.toLowerCase()?.replace(/\s/g, ''));
+  newObj.set('Name', userDetails.name);
+  if (userDetails?.phone) {
+    newObj.set('Phone', userDetails?.phone);
+  }
+  newObj.set('TenantId', {
+    __type: 'Pointer',
+    className: 'partners_Tenant',
+    objectId: tenantRes.id,
+  });
+  if (userDetails && userDetails.company) {
+    newObj.set('Company', userDetails.company);
+  }
+  if (userDetails && userDetails.jobTitle) {
+    newObj.set('JobTitle', userDetails.jobTitle);
+  }
+  if (userDetails && userDetails?.timezone) {
+    newObj.set('Timezone', userDetails.timezone);
+  }
+  return await newObj.save(null, { useMasterKey: true });
+}
+
 export default async function usersignup(request) {
   const userDetails = request.params.userDetails;
 
@@ -61,71 +130,7 @@ export default async function usersignup(request) {
     if (extUser) {
       return { message: 'User already exist' };
     } else {
-      // console.log("role ", role);
-      const partnerCls = Parse.Object.extend('partners_Tenant');
-      const partnerQuery = new partnerCls();
-      partnerQuery.set('UserId', {
-        __type: 'Pointer',
-        className: '_User',
-        objectId: user.id,
-      });
-
-      if (userDetails?.phone) {
-        partnerQuery.set('ContactNumber', userDetails.phone);
-      }
-      partnerQuery.set('TenantName', userDetails.company);
-      partnerQuery.set('EmailAddress', userDetails?.email?.toLowerCase()?.replace(/\s/g, ''));
-      partnerQuery.set('IsActive', true);
-      partnerQuery.set('CreatedBy', {
-        __type: 'Pointer',
-        className: '_User',
-        objectId: user.id,
-      });
-      if (userDetails && userDetails.pincode) {
-        partnerQuery.set('PinCode', userDetails.pincode);
-      }
-      if (userDetails && userDetails.country) {
-        partnerQuery.set('Country', userDetails.country);
-      }
-      if (userDetails && userDetails.state) {
-        partnerQuery.set('State', userDetails.state);
-      }
-      if (userDetails && userDetails.city) {
-        partnerQuery.set('City', userDetails.city);
-      }
-      if (userDetails && userDetails.address) {
-        partnerQuery.set('Address', userDetails.address);
-      }
-      const tenantRes = await partnerQuery.save(null, { useMasterKey: true });
-      // console.log("tenantRes ", tenantRes);
-      const extCls = Parse.Object.extend(extClass + '_Users');
-      const newObj = new extCls();
-      newObj.set('UserId', {
-        __type: 'Pointer',
-        className: '_User',
-        objectId: user.id,
-      });
-      newObj.set('UserRole', userDetails.role);
-      newObj.set('Email', userDetails?.email?.toLowerCase()?.replace(/\s/g, ''));
-      newObj.set('Name', userDetails.name);
-      if (userDetails?.phone) {
-        newObj.set('Phone', userDetails?.phone);
-      }
-      newObj.set('TenantId', {
-        __type: 'Pointer',
-        className: 'partners_Tenant',
-        objectId: tenantRes.id,
-      });
-      if (userDetails && userDetails.company) {
-        newObj.set('Company', userDetails.company);
-      }
-      if (userDetails && userDetails.jobTitle) {
-        newObj.set('JobTitle', userDetails.jobTitle);
-      }
-      if (userDetails && userDetails?.timezone) {
-        newObj.set('Timezone', userDetails.timezone);
-      }
-      const extRes = await newObj.save(null, { useMasterKey: true });
+      await createTenantAndExtUser(user.id, userDetails);
       return { message: 'User sign up', sessionToken: user.sessionToken };
     }
   } catch (err) {

@@ -1,0 +1,22 @@
+# OpenSign-Quantum override: builds server and client from this repository (the stock
+# docker-compose.yml pulls upstream images that do not contain SSO) and gives the server
+# its SSO settings from .env.sso. The client never receives .env.sso, so SSO secrets
+# stay in the backend container only.
+#
+#   cp .env.sso.example .env.sso   # fill in, see docs/RUNBOOK.md
+#   docker compose -f docker-compose.yml -f docker-compose.sso.yml up -d --build
+services:
+  server:
+    image: opensign-quantum/server:local
+    build:
+      context: .
+      dockerfile: apps/OpenSignServer/Dockerhubfile
+    env_file:
+      - .env.prod
+      - .env.sso
+
+  client:
+    image: opensign-quantum/client:local
+    build:
+      context: .
+      dockerfile: apps/OpenSign/Dockerhubfile
