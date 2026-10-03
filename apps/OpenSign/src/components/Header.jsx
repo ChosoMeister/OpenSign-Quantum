@@ -15,6 +15,7 @@ import { appInfo } from "../constant/appinfo";
 import { useDispatch } from "react-redux";
 import { toggleSidebar } from "../redux/reducers/sidebarReducer";
 import { sessionStatus } from "../redux/reducers/userReducer";
+import { ssoLogout } from "../utils/sso";
 
 const Header = ({ isConsole, setIsLoggingOut }) => {
   const { t, i18n } = useTranslation();
@@ -63,6 +64,8 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   const handleLogout = async () => {
     setIsOpen(false);
     setIsLoggingOut(true);
+    // OpenSign-Quantum SSO: returns the IdP logout URL only for SSO users.
+    const idpLogoutUrl = await ssoLogout(localStorage.getItem("accesstoken"));
     try {
       await Parse.User.logOut();
     } catch (err) {
@@ -88,6 +91,10 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     localStorage.setItem("parseAppId", appid);
     localStorage.setItem("favicon", favicon);
     setIsLoggingOut(false);
+    if (idpLogoutUrl) {
+      window.location.assign(idpLogoutUrl);
+      return;
+    }
     navigate("/");
   };
 

@@ -17,6 +17,11 @@ import TemplateBeforeSave from './parsefunction/TemplateBeforesave.js';
 import DocumentBeforeFind from './parsefunction/DocumentAfterFind.js';
 import TemplateAfterFind from './parsefunction/TemplateAfterFind.js';
 import UserAfterFind from './parsefunction/UserAfterFInd.js';
+import {
+  ssoUserBeforeSave,
+  ssoUserBeforeLogin,
+  ssoUserBeforePasswordReset,
+} from '../auth/sso/parseHooks.js';
 import SignatureAfterFind from './parsefunction/SignatureAfterFind.js';
 import TenantAterFind from './parsefunction/TenantAfterFind.js';
 import VerifyEmail from './parsefunction/VerifyEmail.js';
@@ -77,6 +82,10 @@ Parse.Cloud.beforeSave('contracts_Template', TemplateBeforeSave);
 
 // This afterFind function triggers after a query retrieves objects from the specified class, allowing for post-processing of the results.
 Parse.Cloud.afterFind(Parse.User, UserAfterFind);
+// OpenSign-Quantum SSO: protect SSO-provisioned accounts.
+Parse.Cloud.beforeSave(Parse.User, ssoUserBeforeSave);
+Parse.Cloud.beforeLogin(ssoUserBeforeLogin);
+Parse.Cloud.beforePasswordResetRequest(ssoUserBeforePasswordReset);
 Parse.Cloud.afterFind('contracts_Document', DocumentBeforeFind);
 Parse.Cloud.afterFind('contracts_Template', TemplateAfterFind);
 Parse.Cloud.afterFind('contracts_Signature', SignatureAfterFind);
