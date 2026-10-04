@@ -50,6 +50,21 @@ function pointer(className, objectId) {
   return { __type: 'Pointer', className, objectId };
 }
 
+// Same shape as users created by an admin through addUser (tenant + organization + team).
+async function createExtUserInOrg(userId, { identity, role, company, placement }) {
+  const ext = new Parse.Object('contracts_Users');
+  ext.set('UserId', pointer('_User', userId));
+  ext.set('UserRole', role);
+  ext.set('Email', identity.email);
+  ext.set('Name', identity.name);
+  ext.set('Company', company);
+  ext.set('TenantId', pointer('partners_Tenant', placement.tenantId));
+  ext.set('OrganizationId', pointer('contracts_Organizations', placement.orgId));
+  ext.set('TeamIds', [pointer('contracts_Teams', placement.teamId)]);
+  ext.set('CreatedBy', pointer('_User', userId));
+  await ext.save(null, MASTER);
+}
+
 export const parseStore = {
   async findUserBySsoIdentity(issuer, subject) {
     const q = new Parse.Query(Parse.User);
@@ -70,7 +85,9 @@ export const parseStore = {
     return Boolean(await extQ.first(MASTER));
   },
 
-  async createUser({ identity, role, company }) {
+  // `placement` ({ tenantId, orgId, teamId }) puts the user into the shared company
+  // organization (group role mapping); without it the user gets an own tenant as before.
+  async createUser({ identity, role, company, placement }) {
     const user = new Parse.User();
     user.set('username', identity.email);
     // Unusable random password: SSO users never log in with a local password.
@@ -83,12 +100,16 @@ export const parseStore = {
     user.set('ssoSubject', identity.subject);
     await user.signUp(null, MASTER);
     try {
-      await createTenantAndExtUser(user.id, {
-        email: identity.email,
-        name: identity.name,
-        role,
-        company,
-      });
+      if (placement) {
+        await createExtUserInOrg(user.id, { identity, role, company, placement });
+      } else {
+        await createTenantAndExtUser(user.id, {
+          email: identity.email,
+          name: identity.name,
+          role,
+          company,
+        });
+      }
     } catch (err) {
       // Do not leave a half-provisioned _User behind.
       await user.destroy(MASTER).catch(() => {});
@@ -102,10 +123,54 @@ export const parseStore = {
     q.equalTo('UserId', pointer('_User', userId));
     const ext = await q.first(MASTER);
     return ext
-      ? { id: ext.id, role: ext.get('UserRole'), isDisabled: ext.get('IsDisabled') === true }
+      ? {
+          id: ext.id,
+          role: ext.get('UserRole'),
+          isDisabled: ext.get('IsDisabled') === true,
+          tenantId: ext.get('TenantId')?.id,
+        }
       : null;
   },
 
+  async setRole(extUserId, role) {
+    const ext = new Parse.Object('contracts_Users');
+    ext.id = extUserId;
+    ext.set('UserRole', role);
+    await ext.save(null, MASTER);
+  },
+
+  // The shared tenant/organization/team for SSO users; created once (see ensureCompanyOrg).
+  async findCompanyOrg() {
+    const q = new Parse.Query('contracts_Organizations');
+    q.equalTo('SsoManaged', true);
+    q.ascending('createdAt');
+    const org = await q.first(MASTER);
+    if (!org) return null;
+    const teamQ = new Parse.Query('contracts_Teams');
+    teamQ.equalTo('OrganizationId', pointer('contracts_Organizations', org.id));
+    teamQ.equalTo('Name', 'All Users');
+    const team = await teamQ.first(MASTER);
+    return { tenantId: org.get('TenantId')?.id, orgId: org.id, teamId: team?.id };
+  },
+
+  async createCompanyOrg(company) {
+    const tenant = new Parse.Object('partners_Tenant');
+    tenant.set('TenantName', company);
+    tenant.set('IsActive', true);
+    await tenant.save(null, MASTER);
+    const org = new Parse.Object('contracts_Organizations');
+    org.set('Name', company);
+    org.set('IsActive', true);
+    org.set('SsoManaged', true);
+    org.set('TenantId', pointer('partners_Tenant', tenant.id));
+    await org.save(null, MASTER);
+    const team = new Parse.Object('contracts_Teams');
+    team.set('Name', 'All Users');
+    team.set('IsActive', true);
+    team.set('OrganizationId', pointer('contracts_Organizations', org.id));
+    await team.save(null, MASTER);
+    return { tenantId: tenant.id, orgId: org.id, teamId: team.id };
+  },
   // Same mechanism as usersignup.js: Parse's master-key /loginAs creates a normal Parse session.
   async createSession(userId) {
     const res = await axios.post(`${cloudServerUrl}/loginAs`, null, {

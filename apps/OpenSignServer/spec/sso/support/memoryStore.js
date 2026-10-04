@@ -24,7 +24,8 @@ export function createMemoryStore() {
     async emailInUse(email) {
       return users.some(u => u.email === email);
     },
-    async createUser({ identity, role }) {
+    orgs: [],
+    async createUser({ identity, role, placement }) {
       const id = `sso${++seq}`;
       users.push({
         id,
@@ -33,8 +34,19 @@ export function createMemoryStore() {
         ssoSubject: identity.subject,
         name: identity.name,
       });
-      ext.set(id, { id: `ext${id}`, role, isDisabled: false });
+      ext.set(id, { id: `ext${id}`, role, isDisabled: false, tenantId: placement?.tenantId });
       return { id };
+    },
+    async setRole(extId, role) {
+      for (const e of ext.values()) if (e.id === extId) e.role = role;
+    },
+    async findCompanyOrg() {
+      return this.orgs[0] || null;
+    },
+    async createCompanyOrg(company) {
+      const org = { tenantId: `t${++seq}`, orgId: `o${seq}`, teamId: `team${seq}`, company };
+      this.orgs.push(org);
+      return org;
     },
     async getExtUser(userId) {
       return ext.get(userId) || null;

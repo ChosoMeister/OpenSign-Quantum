@@ -29,8 +29,8 @@
 This fork adds vendor-neutral **Single Sign-On** to self-hosted OpenSign. Everything else stays as upstream.
 
 - **Protocols:** OpenID Connect or SAML 2.0, against any standards-compliant IdP (Keycloak, Entra ID, Okta, ADFS, Authentik and others). It does not depend on any OpenSignLabs-hosted service.
-- **Provisioning:** SSO users are created on first login as standard users (`contracts_User`). The IdP never grants admin rights.
-- **Local login:** email/password login stays available for administrators and as break-glass access.
+- **Provisioning:** SSO users are created on first login. By default everyone is a standard user (`contracts_User`). Optionally, IdP groups map to Admin / OrgAdmin / Editor (`SSO_*_GROUPS`).
+- **Local login:** email/password login stays available for administrators and as break-glass access, or can be turned off (`LOCAL_LOGIN_ENABLED=false`) for SSO-only deployments.
 - **Off switch:** `SSO_ENABLED=false` (the default) gives upstream behaviour.
 
 **Quick start**

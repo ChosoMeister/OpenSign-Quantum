@@ -2,7 +2,9 @@ import {
   ssoUserBeforeSave,
   ssoUserBeforeLogin,
   ssoUserBeforePasswordReset,
+  assertLocalAccountsEnabled,
 } from '../../auth/sso/parseHooks.js';
+import { setSsoConfigForTests } from '../../auth/sso/runtime.js';
 
 // Minimal stand-ins for Parse objects used by the triggers.
 const obj = fields => ({ get: k => fields[k], has: k => k in fields });
@@ -42,5 +44,25 @@ describe('SSO Parse hooks', () => {
   it('leaves local administrators untouched', () => {
     expect(() => ssoUserBeforeLogin({ object: obj({}) })).not.toThrow();
     expect(() => ssoUserBeforePasswordReset({ object: obj({}) })).not.toThrow();
+  });
+
+  describe('with LOCAL_LOGIN_ENABLED=false', () => {
+    beforeEach(() => setSsoConfigForTests({ enabled: true, localLoginEnabled: false }));
+    afterEach(() => setSsoConfigForTests(undefined));
+
+    it('rejects every password login and password reset', () => {
+      expect(() => ssoUserBeforeLogin({ object: obj({}) })).toThrow();
+      expect(() => ssoUserBeforePasswordReset({ object: obj({}) })).toThrow();
+    });
+
+    it('blocks local signup/admin functions', () => {
+      expect(() => assertLocalAccountsEnabled()).toThrow();
+    });
+
+    it('still allows creating contact/signer accounts (they cannot log in with a password)', () => {
+      expect(() =>
+        ssoUserBeforeSave({ object: obj({ username: 'signer@example.com' }) })
+      ).not.toThrow();
+    });
   });
 });

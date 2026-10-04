@@ -31,6 +31,7 @@ describe('OIDC', () => {
     mutateUrl,
     mutateFlow,
     requireVerifiedEmail = true,
+    groupsClaim,
   } = {}) {
     const { url, flow } = await provider.buildLoginRequest();
     const authz = new URL(url);
@@ -39,6 +40,7 @@ describe('OIDC', () => {
     if (mutateUrl) cb = mutateUrl(cb);
     return provider.handleCallback(cb, mutateFlow ? mutateFlow(flow) : flow, {
       requireVerifiedEmail,
+      groupsClaim,
     });
   }
 
@@ -132,6 +134,18 @@ describe('OIDC', () => {
     idp.state.claims = { email: undefined, email_verified: undefined };
     idp.state.userinfo = { sub: 'someone-else', email: 'x@example.com', email_verified: true };
     await expectCode(login(), 'VALIDATION_FAILED');
+  });
+
+  it('reads IdP groups from the ID token when a role mapping is configured', async () => {
+    idp.state.claims = { groups: ['/opensign-admins', 'sales'] };
+    expect((await login({ groupsClaim: 'groups' })).groups).toEqual(['/opensign-admins', 'sales']);
+    // Without a mapping the claim is not read at all.
+    expect((await login()).groups).toEqual([]);
+  });
+
+  it('falls back to userinfo for groups (same subject only)', async () => {
+    idp.state.userinfo = { sub: 'user-sub-1', groups: ['opensign-editors'] };
+    expect((await login({ groupsClaim: 'groups' })).groups).toEqual(['opensign-editors']);
   });
 
   it('rejects an unverified email when verification is required', async () => {
@@ -242,7 +256,12 @@ describe('OIDC', () => {
 
     it('serves a browser-safe config', async () => {
       const body = await (await fetch(`${base}/auth/sso/config`)).json();
-      expect(body).toEqual({ enabled: true, protocol: 'oidc', displayName: 'Company SSO' });
+      expect(body).toEqual({
+        enabled: true,
+        protocol: 'oidc',
+        displayName: 'Company SSO',
+        localLogin: true,
+      });
     });
   });
 
@@ -253,7 +272,10 @@ describe('OIDC', () => {
       const server = http.createServer(app);
       await new Promise(r => server.listen(0, '127.0.0.1', r));
       const base = `http://127.0.0.1:${server.address().port}`;
-      expect(await (await fetch(`${base}/auth/sso/config`)).json()).toEqual({ enabled: false });
+      expect(await (await fetch(`${base}/auth/sso/config`)).json()).toEqual({
+        enabled: false,
+        localLogin: true,
+      });
       expect((await fetch(`${base}/auth/sso/login`, { redirect: 'manual' })).status).toBe(404);
       expect((await fetch(`${base}/auth/oidc/login`, { redirect: 'manual' })).status).toBe(404);
       await new Promise(r => server.close(r));

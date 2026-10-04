@@ -182,11 +182,11 @@ This is an example only; the code has no Keycloak-specific logic. It was tested 
 - Clients cannot write these fields (`beforeSave` trigger), and they are hidden from other users (`protectedFields`).
 
 **Just-in-time provisioning** (on by default)
-- A new SSO user gets a `_User` with an unusable random password, plus their own `partners_Tenant` and a `contracts_Users` record.
-- This reuses `createTenantAndExtUser` from `usersignup.js`.
-- The role is always the standard `contracts_User`.
-
-**No IdP-driven authorization.** IdP `role`, `groups`, `admin` or `department` claims are ignored. SSO never creates administrators; administrators are managed locally.
+- A new SSO user gets a `_User` with an unusable random password and a `contracts_Users` record.
+- **Without a role mapping** (default):
+  - Every SSO user is a standard `contracts_User` in their own `partners_Tenant`, as upstream's individual signup does (`createTenantAndExtUser` from `usersignup.js`).
+  - IdP `role`, `groups`, `admin` or `department` claims are ignored, and SSO never creates administrators.
+- **With a role mapping** (see the next section): users join one shared company organization, and their role comes from their IdP groups.
 
 **Existing-account collision.** If an account with the same email already exists and is not linked to this SSO identity, login is refused with this message:
 
@@ -199,7 +199,58 @@ The accounts are never merged automatically. To migrate a local user to SSO, an 
 - OpenSign's own `IsDisabled` flag is enforced server-side before a session is created.
 - SSO accounts cannot use local password login or password reset (`beforeLogin` / `beforePasswordResetRequest` triggers), so an IdP-disabled user has no local fallback.
 
-**Local administrators** log in with email and password exactly as before. The form remains visible below the SSO button as a recovery path.
+**Local administrators** log in with email and password exactly as before, unless `LOCAL_LOGIN_ENABLED=false` (next section). By default the form stays visible below the SSO button as a recovery path.
+
+## Roles from IdP groups (optional)
+
+Set any of these to map IdP groups to OpenSign roles:
+
+| Variable | Role | Example |
+|---|---|---|
+| `SSO_ADMIN_GROUPS` | `contracts_Admin`: full administration of the company organization | `opensign-admins` |
+| `SSO_ORGADMIN_GROUPS` | `contracts_OrgAdmin`: manages users of the organization | `opensign-orgadmins` |
+| `SSO_EDITOR_GROUPS` | `contracts_Editor` | `opensign-editors` |
+| `SSO_GROUPS_CLAIM` | OIDC claim / SAML attribute holding the groups (default `groups`) | `groups` |
+
+**How the mapping works**
+- **Group names:** comma-separated, compared case-insensitively. A leading `/` (Keycloak full paths) is ignored. Nested groups are not resolved; the IdP must send the user's direct groups.
+- **Priority:** Admin > OrgAdmin > Editor. Users in none of these groups are `contracts_User`.
+- **When roles change:** the role is recomputed on **every SSO login**. Adding or removing a group in the IdP takes effect at the user's next login. Existing sessions keep their role until then.
+- **Untouched roles:** roles outside these four (e.g. `contracts_Guest`) are never changed.
+- **Shared organization:**
+  - All SSO users join **one company organization**: a `partners_Tenant`, a `contracts_Organizations` record marked `SsoManaged` and an "All Users" team, all named after `SSO_COMPANY_NAME`.
+  - The server creates it at startup, so the first-run `/addadmin` page is never shown.
+  - This is required because OpenSign admins manage users within their own tenant/organization.
+  - Users provisioned *before* the mapping was enabled stay in their own tenant.
+
+**IdP setup**
+- **Keycloak OIDC:** add a "Group Membership" mapper to the client (claim `groups`, Full group path off).
+- **Keycloak SAML:** add a "Group list" mapper (attribute `groups`, Single group attribute off).
+- See `docs/sso-test-env/keycloak-setup.sh`.
+
+**Colleagues as signers:**
+- In the shared company organization, "Request signatures" also lists active colleagues, not just the user's own Contactbook.
+- When a colleague is listed, a contact for them is added to the user's Contactbook, linked to the colleague's own account.
+- Colleagues deactivated in OpenSign are hidden.
+- Other organizations keep upstream behaviour.
+
+**Security boundary:** with a mapping, **whoever can change group membership in the IdP controls who is an OpenSign admin**. Restrict and audit group administration in the IdP.
+
+## Turning off local login (optional)
+
+`LOCAL_LOGIN_ENABLED=false` makes OpenSign SSO-only. It requires `SSO_ENABLED=true` and at least one `SSO_ADMIN_GROUPS` entry, otherwise the server refuses to start.
+
+What it does:
+- The login page shows only the SSO button.
+- The server rejects password login, password reset, client-side signup, and the `addadmin`, `usersignup` and `resetpassword` cloud functions.
+- On the Users page, **Add user** and **Reset password** are hidden. Users come from the IdP and passwords are managed there. Admins can still see users and activate/deactivate them.
+- Administrators come only from `SSO_ADMIN_GROUPS`.
+
+**Emergency access** (IdP down or group mapping broken):
+1. Set `LOCAL_LOGIN_ENABLED=true` and restart the server.
+2. Local accounts that still exist can log in again.
+
+There is no other bypass.
 
 ## Security notes
 

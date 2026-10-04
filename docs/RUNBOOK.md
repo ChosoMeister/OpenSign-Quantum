@@ -233,6 +233,32 @@ SAML_ACS_URL=https://sign.example.com/api/auth/saml/callback
 - It is read **only** by the server container and is git-ignored.
 - Never put SSO values into `.env.prod`, which the client container also reads, or into any `REACT_APP_*` variable.
 
+### Optional: admins from IdP groups, SSO-only login
+
+To manage OpenSign roles in the IdP instead of locally:
+
+1. **Create the groups in the IdP**, e.g. `opensign-admins`, `opensign-orgadmins` and `opensign-editors`. Put the right people in them.
+2. **Release the user's groups to OpenSign** in a `groups` claim/attribute:
+   - **Keycloak OIDC client:** Client scopes → dedicated scope → Add mapper → *Group Membership*, with token claim name `groups` and *Full group path* **Off**.
+   - **Keycloak SAML client:** add mapper *Group list*, with attribute name `groups` and *Single group attribute* **Off**.
+3. **Add to `.env.sso`:**
+
+```env
+SSO_ADMIN_GROUPS=opensign-admins
+SSO_ORGADMIN_GROUPS=opensign-orgadmins
+SSO_EDITOR_GROUPS=opensign-editors
+SSO_COMPANY_NAME=Acme Inc
+# SSO-only: hide and disable email/password login, /addadmin and local signup
+LOCAL_LOGIN_ENABLED=false
+```
+
+**What this changes**
+- All SSO users then join one company organization.
+- Roles are re-evaluated at each login, so a group change applies at the user's next login.
+- With `LOCAL_LOGIN_ENABLED=false` there is no local administrator. Skip A7: the first person in `opensign-admins` who logs in is an admin.
+- In SSO-only mode the Users page has no **Add user** or **Reset password**. New people get access by being added in the IdP; they appear in OpenSign after their first login. Admins can still activate/deactivate users there.
+- Whoever can edit these groups in the IdP controls OpenSign administration. Restrict that right in the IdP.
+
 ## B3. Apply
 
 ```bash
@@ -261,12 +287,17 @@ dc exec server curl -sS https://sso.example.com/realms/company/.well-known/openi
 | 7 | Log out, then SSO again | Same account and documents. With OIDC, the IdP asks for credentials again. |
 | 8 | Local admin with email/password | Still works (break-glass) |
 | 9 | Disable the test user in the IdP, then try SSO | Refused |
+| 10 | (Group mapping) A member of `SSO_ADMIN_GROUPS` logs in | Admin menus (Settings → Users) visible; sees all SSO users |
+| 11 | (Group mapping) Remove that person from the group, log out and in | Standard user, no admin menus |
+| 12 | (`LOCAL_LOGIN_ENABLED=false`) Login page and `/addadmin` | Only the SSO button; `/addadmin` is never offered |
+| 14 | (Group mapping) Request signatures → Signers dropdown | Colleagues of the organization are listed without adding them as contacts |
+| 13 | (`LOCAL_LOGIN_ENABLED=false`) Admin opens Settings → Users | No "Add user" button and no "Reset password" action; the Active toggle works |
 
 **Server log events:** `sso.login.initiated`, `sso.user.provisioned`, `sso.login.success`. Failures appear as `sso.login.rejected`, with a `code` and an internal `detail`.
 
 ## B5. What users will see
 
-- **New employees:** an account is created on first SSO login. No admin action is needed, and the IdP never grants admin rights.
+- **New employees:** an account is created on first SSO login, with no admin action needed. Without a group mapping everyone is a standard user; with one, the role follows the IdP groups.
 - **"An account with this email already exists":** a local account already uses that email. Accounts are never merged automatically; see C3.
 - **Users disabled in the IdP** cannot log in, and SSO accounts have no local password to fall back on.
 
@@ -315,6 +346,9 @@ Run A8 and B4 again afterwards.
 | Link an existing local account to SSO | With the master key (Parse Dashboard or REST), set `ssoProvider`, `ssoIssuer` and `ssoSubject` on that `_User`. The values are the IdP issuer/entity ID and the user's `sub`/NameID. |
 | Rotate the OIDC client secret | Change it in the IdP and in `.env.sso`, then `dc up -d server` |
 | SAML IdP certificate rollover | `dc restart server` re-reads the metadata |
+| Give someone access (SSO-only) | Create or enable them in the IdP. Their OpenSign account is created at their first SSO login. |
+| Make someone an admin / editor | Add them to the `SSO_ADMIN_GROUPS` / `SSO_EDITOR_GROUPS` group in the IdP; it applies at their next login |
+| Remove admin rights | Remove them from the group in the IdP; they become a standard user at their next login |
 | Change the button text | `SSO_DISPLAY_NAME` in `.env.sso`, then `dc up -d server` |
 
 ## C4. Rollback and emergency
@@ -322,7 +356,8 @@ Run A8 and B4 again afterwards.
 | Situation | Action |
 |---|---|
 | IdP outage | Local administrators keep logging in with email and password. SSO users wait for the IdP. |
-| Turn SSO off | Set `SSO_ENABLED=false` in `.env.sso`, then `dc up -d server`. The SSO button disappears and data is kept. |
+| Turn SSO off | Set `SSO_ENABLED=false` (and remove `LOCAL_LOGIN_ENABLED=false`) in `.env.sso`, then `dc up -d server`. The SSO button disappears and data is kept. |
+| SSO-only and the IdP is down or the admin group is broken | Set `LOCAL_LOGIN_ENABLED=true` in `.env.sso`, then `dc up -d server`. Existing local accounts can log in again. |
 | Bad release | `git checkout <previous tag>`, `dc up -d --build`. If the database changed, restore it from C1. |
 
 ## C5. Troubleshooting
@@ -337,6 +372,8 @@ Run A8 and B4 again afterwards.
 | IdP error "Invalid redirect_uri" | IdP redirect URI ≠ `OIDC_REDIRECT_URI`. They must match exactly, including `/api`. |
 | "Your sign-in session expired or is invalid" | Not using HTTPS, the login took more than 10 minutes, or a different host name was used |
 | "Single Sign-On could not be verified" | Read the `detail` field in `dc logs server`. Usual causes: issuer mismatch, wrong secret, clock skew, SAML ACS/Destination mismatch, unsigned Assertion, or transient NameID (set `SAML_SUBJECT_ATTRIBUTE`). |
+| Admin from the IdP group is a normal user in OpenSign | The token/assertion carries no groups. Add the group mapper (B1, optional section) and check the name against `SSO_ADMIN_GROUPS`. The change applies at the next login. |
+| Server exits "LOCAL_LOGIN_ENABLED=false requires SSO_ADMIN_GROUPS" | SSO-only needs at least one admin group |
 | "…did not supply an email address" / "…not verified" | Release `email` / `email_verified` to the client, or set `SSO_REQUIRE_VERIFIED_EMAIL=false` |
 | Finish on signing shows "Something went wrong" | Invalid `PFX_BASE64` / `PASS_PHRASE` |
 | Signers receive no email | SMTP/Mailgun settings; check `dc logs server` for mail errors |

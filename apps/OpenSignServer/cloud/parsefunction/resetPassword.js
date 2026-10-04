@@ -1,4 +1,7 @@
+import { assertLocalAccountsEnabled } from '../../auth/sso/parseHooks.js';
 export default async function resetPassword(request) {
+  // OpenSign-Quantum: passwords are managed by the IdP when LOCAL_LOGIN_ENABLED=false.
+  assertLocalAccountsEnabled();
   const userId = request.params.userId;
   const newPassword = request.params.password;
 

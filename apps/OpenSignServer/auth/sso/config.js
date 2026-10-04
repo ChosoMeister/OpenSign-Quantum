@@ -26,6 +26,18 @@ function pem(value) {
   return v ? v.replace(/\\n/g, '\n') : '';
 }
 
+// Comma-separated group list -> trimmed, de-duplicated array.
+function list(value) {
+  return [
+    ...new Set(
+      str(value)
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean)
+    ),
+  ];
+}
+
 function requireVars(env, names, protocol) {
   const missing = names.filter(name => !str(env[name]));
   if (missing.length) {
@@ -56,8 +68,28 @@ export function loadSsoConfig(env = process.env) {
     companyName: str(env.SSO_COMPANY_NAME, str(env.SSO_DISPLAY_NAME, 'SSO')),
     frontendUrl: str(env.SSO_FRONTEND_URL, str(env.PUBLIC_URL)).replace(/\/+$/, ''),
     cookieSecret: str(env.SSO_COOKIE_SECRET, str(env.MASTER_KEY)),
+    // Email/password login. Turning it off requires SSO with an admin group mapping.
+    localLoginEnabled: bool(env.LOCAL_LOGIN_ENABLED, true),
+    // Optional IdP group -> OpenSign role mapping (exact group names, no nesting).
+    roleGroups: {
+      admin: list(env.SSO_ADMIN_GROUPS),
+      orgAdmin: list(env.SSO_ORGADMIN_GROUPS),
+      editor: list(env.SSO_EDITOR_GROUPS),
+    },
+    groupsClaim: str(env.SSO_GROUPS_CLAIM, 'groups'),
   };
+  base.roleMappingEnabled =
+    base.roleGroups.admin.length + base.roleGroups.orgAdmin.length + base.roleGroups.editor.length >
+    0;
+  if (!base.localLoginEnabled && !enabled) {
+    throw new SsoConfigError('LOCAL_LOGIN_ENABLED=false requires SSO_ENABLED=true');
+  }
   if (!enabled) return base;
+  if (!base.localLoginEnabled && !base.roleGroups.admin.length) {
+    throw new SsoConfigError(
+      'LOCAL_LOGIN_ENABLED=false requires SSO_ADMIN_GROUPS, otherwise nobody can administer OpenSign'
+    );
+  }
 
   if (!PROTOCOLS.includes(base.protocol)) {
     throw new SsoConfigError(
@@ -119,6 +151,8 @@ export function loadSsoConfig(env = process.env) {
       nameAttribute: str(env.SAML_NAME_ATTRIBUTE, 'name'),
       // Optional stable attribute to use as subject instead of the NameID (e.g. uid, objectGUID).
       subjectAttribute: str(env.SAML_SUBJECT_ATTRIBUTE),
+      // Read only when SSO_*_GROUPS are set (same name as SSO_GROUPS_CLAIM).
+      groupsAttribute: base.roleMappingEnabled ? base.groupsClaim : '',
       // Optional NameID format to request, e.g. urn:oasis:names:tc:SAML:2.0:nameid-format:persistent
       nameIdFormat: str(env.SAML_NAMEID_FORMAT),
       // Assertion signatures are always required; the outer Response signature is required by default.
@@ -133,6 +167,11 @@ export function loadSsoConfig(env = process.env) {
 
 /** Browser-safe subset. Never add secrets here. */
 export function getPublicConfig(config) {
-  if (!config?.enabled) return { enabled: false };
-  return { enabled: true, protocol: config.protocol, displayName: config.displayName };
+  if (!config?.enabled) return { enabled: false, localLogin: true };
+  return {
+    enabled: true,
+    protocol: config.protocol,
+    displayName: config.displayName,
+    localLogin: config.localLoginEnabled !== false,
+  };
 }

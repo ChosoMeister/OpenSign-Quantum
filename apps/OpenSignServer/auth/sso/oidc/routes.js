@@ -44,6 +44,7 @@ export function createOidcRouter({ config, provider, store }) {
       let idToken;
       const identity = await provider.handleCallback(config.oidc.redirectUri + qs, flow, {
         requireVerifiedEmail: config.requireVerifiedEmail,
+        groupsClaim: config.roleMappingEnabled ? config.groupsClaim : undefined,
         onIdToken: token => (idToken = token),
       });
       const redirect = await completeSsoLogin(identity, {

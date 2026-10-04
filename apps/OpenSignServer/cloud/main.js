@@ -18,6 +18,7 @@ import DocumentBeforeFind from './parsefunction/DocumentAfterFind.js';
 import TemplateAfterFind from './parsefunction/TemplateAfterFind.js';
 import UserAfterFind from './parsefunction/UserAfterFInd.js';
 import ExtUserBeforeSave from './parsefunction/ExtUserBeforeSave.js';
+import setUserDisabled from './parsefunction/setUserDisabled.js';
 import {
   ssoUserBeforeSave,
   ssoUserBeforeLogin,
@@ -114,6 +115,7 @@ Parse.Cloud.define('isextenduser', isextenduser);
 Parse.Cloud.define('getlogobydomain', GetLogoByDomain);
 Parse.Cloud.define('addadmin', AddAdmin);
 Parse.Cloud.define('checkadminexist', CheckAdminExist);
+Parse.Cloud.define('setuserdisabled', setUserDisabled);
 Parse.Cloud.define('updateuserasadmin', UpdateExistUserAsAdmin);
 Parse.Cloud.define('newsletter', Newsletter);
 Parse.Cloud.define('getteams', getTeams);

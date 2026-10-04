@@ -5,9 +5,10 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * Normalized identity shared by OIDC and SAML.
  * `issuer` + `subject` is the stable external identity; email is not.
- * Group/role/admin claims are deliberately dropped: they never affect authorization.
+ * Only `groups` is kept from the IdP's authorization data; it is used solely through the
+ * explicit SSO_*_GROUPS mapping. Other role/admin claims are dropped.
  */
-export function normalizeIdentity({ provider, issuer, subject, email, name }) {
+export function normalizeIdentity({ provider, issuer, subject, email, name, groups }) {
   if (!['oidc', 'saml'].includes(provider)) {
     throw new SsoError('VALIDATION_FAILED', `unknown provider ${provider}`);
   }
@@ -29,5 +30,12 @@ export function normalizeIdentity({ provider, issuer, subject, email, name }) {
     externalId: `${iss}|${sub}`,
     email: mail,
     name: displayName,
+    groups: Object.freeze(normalizeGroups(groups)),
   });
+}
+
+// Accepts an array or a single string; keeps non-empty strings only.
+function normalizeGroups(groups) {
+  const arr = Array.isArray(groups) ? groups : groups ? [groups] : [];
+  return arr.filter(g => typeof g === 'string' && g.trim()).map(g => g.trim());
 }

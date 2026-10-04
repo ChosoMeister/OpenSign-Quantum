@@ -89,7 +89,7 @@ function pick(profile, names) {
 /** Map a validated node-saml profile to the normalized identity. */
 export function identityFromProfile(
   profile,
-  { idpEntityId, emailAttribute, nameAttribute, subjectAttribute }
+  { idpEntityId, emailAttribute, nameAttribute, subjectAttribute, groupsAttribute }
 ) {
   if (!profile?.nameID) throw new SsoError('VALIDATION_FAILED', 'SAML assertion has no NameID');
   let subject;
@@ -116,5 +116,7 @@ export function identityFromProfile(
     subject,
     email,
     name,
+    // Multi-valued attribute: node-saml returns a string for one value, an array for several.
+    groups: groupsAttribute ? profile[groupsAttribute] : undefined,
   });
 }

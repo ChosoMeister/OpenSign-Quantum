@@ -69,7 +69,7 @@ describe('SAML', () => {
         name: 'Sam Smith',
       })
     );
-    expect(id.groups).toBeUndefined();
+    expect(id.groups).toEqual([]); // groups attribute is read only with a role mapping
   });
 
   it('rejects an invalid signature', async () => {
@@ -183,6 +183,16 @@ describe('SAML', () => {
       },
     });
     await expectCode(p.buildLoginUrl(), 'PROVIDER_UNAVAILABLE');
+  });
+
+  it('reads the groups attribute only when configured', async () => {
+    const p = createSamlProvider(
+      { ...samlConfig, groupsAttribute: 'groups' },
+      { store, fetchMetadata: async () => idpMetadata(keys.certB64) }
+    );
+    const inResponseTo = requestIdFromLoginUrl(await p.buildLoginUrl());
+    const id = await p.handleCallback({ SAMLResponse: buildResponse(keys, { inResponseTo }) });
+    expect(id.groups).toEqual(['admins']);
   });
 
   it('generates SP metadata with entity ID and ACS', async () => {

@@ -27,7 +27,7 @@ async function getCallerExtUser(user) {
 }
 
 // An admin may (de)activate other users in their tenant; an OrgAdmin only within their organization.
-async function canToggleDisabled(user, target) {
+export async function canToggleDisabled(user, target) {
   const caller = await getCallerExtUser(user);
   const role = caller?.get('UserRole');
   if (!caller || !ADMIN_ROLES.includes(role)) return false;

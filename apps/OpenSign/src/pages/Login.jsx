@@ -55,6 +55,8 @@ function Login() {
   const [ssoConfig, setSsoConfig] = useState({ enabled: false });
   // SSO errors stay visible (unlike the 2s toast) because they often need admin action.
   const [ssoError, setSsoError] = useState("");
+  // LOCAL_LOGIN_ENABLED=false on the server: SSO only, no email/password form.
+  const showLocalLogin = !ssoConfig?.enabled || ssoConfig?.localLogin !== false;
   useEffect(() => {
     handleUserExist();
     // eslint-disable-next-line
@@ -499,14 +501,19 @@ function Login() {
                             {ssoError}
                           </Alert>
                         )}
-                        <div className="flex items-center gap-2 mt-3 text-[12px] text-[#878787]">
-                          <hr className="flex-1" />
-                          {t("sso-or")}
-                          <hr className="flex-1" />
-                        </div>
+                        {showLocalLogin && (
+                          <div className="flex items-center gap-2 mt-3 text-[12px] text-[#878787]">
+                            <hr className="flex-1" />
+                            {t("sso-or")}
+                            <hr className="flex-1" />
+                          </div>
+                        )}
                       </div>
                     )}
-                    <fieldset>
+                    <fieldset
+                      hidden={!showLocalLogin}
+                      disabled={!showLocalLogin}
+                    >
                       <legend className="text-[12px] text-[#878787]">
                         {t("Login-to-your-account")}
                       </legend>
@@ -572,7 +579,9 @@ function Login() {
                           </div>
                       </div>
                     </fieldset>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-center text-xs font-bold mt-2">
+                    <div
+                      className={`${showLocalLogin ? "grid" : "hidden"} grid-cols-1 md:grid-cols-2 gap-2 text-center text-xs font-bold mt-2`}
+                    >
                       <button
                         type="submit"
                         className="op-btn op-btn-primary"

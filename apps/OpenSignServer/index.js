@@ -15,13 +15,14 @@ import { app as customRoute } from './cloud/customRoute/customApp.js';
 import { exec } from 'child_process';
 import { createTransport } from 'nodemailer';
 import { appName, cloudServerUrl, serverAppId, smtpenable, smtpsecure, useLocal } from './Utils.js';
-import { loadSsoConfig } from './auth/sso/config.js';
+import { getSsoConfig } from './auth/sso/runtime.js';
+import { ensureCompanyOrg } from './auth/sso/company.js';
 import { createSsoRouter } from './auth/sso/routes.js';
 import { parseStore, ensureSsoSchemas, SSO_USER_FIELDS } from './auth/sso/store.js';
 import runDbMigrations from './migrationdb/index.js';
 import { validateSignedLocalUrl } from './cloud/parsefunction/getSignedUrl.js';
 // OpenSign-Quantum SSO: fail fast on invalid configuration.
-export const ssoConfig = loadSsoConfig();
+export const ssoConfig = getSsoConfig();
 let fsAdapter;
 
 if (useLocal !== 'true') {
@@ -226,7 +227,12 @@ if (!process.env.TESTING) {
     const server = new ParseServer(config);
     await server.start();
     app.use(mountPath, server.app);
-    if (ssoConfig.enabled) await ensureSsoSchemas();
+    if (ssoConfig.enabled) {
+      await ensureSsoSchemas();
+      // Group role mapping: create the shared company tenant/organization/team up front, so the
+      // first-run /addadmin page is never offered and concurrent first logins cannot race.
+      if (ssoConfig.roleMappingEnabled) await ensureCompanyOrg(parseStore, ssoConfig);
+    }
   } catch (err) {
     console.log(err);
     process.exit();
