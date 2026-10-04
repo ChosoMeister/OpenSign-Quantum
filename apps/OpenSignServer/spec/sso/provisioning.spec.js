@@ -46,7 +46,8 @@ describe('SSO provisioning', () => {
       role: 'contracts_Admin',
     });
     expect(id.isAdmin).toBeUndefined();
-    expect(id.groups).toBeUndefined();
+    expect(id.role).toBeUndefined();
+    // Without SSO_*_GROUPS configured, groups are carried but never used.
     const res = await resolveUser(id, { store, config });
     expect(res.role).toBe('contracts_User');
   });

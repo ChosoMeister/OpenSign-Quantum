@@ -179,10 +179,11 @@ const UserList = () => {
       newArray[index] = { ...newArray[index], IsDisabled: !IsDisabled };
       setUserList(newArray);
       try {
-        const extUser = new Parse.Object("contracts_Users");
-        extUser.id = user.objectId;
-        extUser.set("IsDisabled", !IsDisabled);
-        await extUser.save();
+        // Server-side so the role/tenant checks apply (a direct class write is denied).
+        await Parse.Cloud.run("setuserdisabled", {
+          extUserId: user.objectId,
+          isDisabled: !IsDisabled
+        });
         showAlert(
           !IsDisabled === true ? "danger" : "success",
           !IsDisabled === true ? t("user-deactivated") : t("user-activated")

@@ -36,6 +36,8 @@ cd apps/OpenSignServer && source ../../docs/sso-test-env/keycloak-oidc.env && np
 
 - **OIDC client `opensign`:** confidential, PKCE S256, redirect `http://localhost:8080/auth/oidc/callback`. Logout sends `id_token_hint`, so Keycloak ends its session without a confirmation page.
 - **SAML client `http://localhost:8080`:** Response and Assertion signed, persistent NameID, `email` / `givenName` / `surname` mappers. The IdP metadata is at `http://localhost:8180/realms/company/protocol/saml/descriptor`.
+- **Groups:** `opensign-admins`, `opensign-orgadmins` and `opensign-editors`; `kc-user` is in `opensign-admins`. `keycloak-oidc.env` and `keycloak-saml.env` enable the role mapping and `LOCAL_LOGIN_ENABLED=false`.
+- **Scripted login:** `node docs/sso-test-env/keycloak-e2e.mjs kc-user` prints the role and organization.
 - **SAML logout:** it ends only the OpenSign session (no SLO), so the next SSO click may log in directly while the Keycloak session is alive.
 
 ## Browser end-to-end checklist

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import { assertLocalAccountsEnabled } from '../../auth/sso/parseHooks.js';
 const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
 const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;
@@ -114,6 +115,8 @@ export async function createTenantAndExtUser(userId, userDetails) {
 }
 
 export default async function usersignup(request) {
+  // OpenSign-Quantum: no local accounts when LOCAL_LOGIN_ENABLED=false.
+  assertLocalAccountsEnabled();
   const userDetails = request.params.userDetails;
 
   try {

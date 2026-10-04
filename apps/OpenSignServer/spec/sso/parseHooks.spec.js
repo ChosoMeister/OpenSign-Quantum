@@ -2,7 +2,9 @@ import {
   ssoUserBeforeSave,
   ssoUserBeforeLogin,
   ssoUserBeforePasswordReset,
+  assertLocalAccountsEnabled,
 } from '../../auth/sso/parseHooks.js';
+import { setSsoConfigForTests } from '../../auth/sso/runtime.js';
 
 // Minimal stand-ins for Parse objects used by the triggers.
 const obj = fields => ({ get: k => fields[k], has: k => k in fields });
@@ -42,5 +44,24 @@ describe('SSO Parse hooks', () => {
   it('leaves local administrators untouched', () => {
     expect(() => ssoUserBeforeLogin({ object: obj({}) })).not.toThrow();
     expect(() => ssoUserBeforePasswordReset({ object: obj({}) })).not.toThrow();
+  });
+
+  describe('with LOCAL_LOGIN_ENABLED=false', () => {
+    beforeEach(() => setSsoConfigForTests({ enabled: true, localLoginEnabled: false }));
+    afterEach(() => setSsoConfigForTests(undefined));
+
+    it('rejects every password login and password reset', () => {
+      expect(() => ssoUserBeforeLogin({ object: obj({}) })).toThrow();
+      expect(() => ssoUserBeforePasswordReset({ object: obj({}) })).toThrow();
+    });
+
+    it('blocks client-side account creation and local signup/admin functions', () => {
+      expect(() => ssoUserBeforeSave({ object: obj({ username: 'x' }) })).toThrow();
+      expect(() => assertLocalAccountsEnabled()).toThrow();
+      // SSO provisioning creates users with the master key.
+      expect(() =>
+        ssoUserBeforeSave({ master: true, object: obj({ ssoSubject: 's' }) })
+      ).not.toThrow();
+    });
   });
 });

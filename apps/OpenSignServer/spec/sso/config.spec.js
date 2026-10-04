@@ -23,7 +23,7 @@ describe('SSO config', () => {
   it('is disabled by default and exposes nothing else', () => {
     const cfg = loadSsoConfig({});
     expect(cfg.enabled).toBe(false);
-    expect(getPublicConfig(cfg)).toEqual({ enabled: false });
+    expect(getPublicConfig(cfg)).toEqual({ enabled: false, localLogin: true });
   });
 
   it('applies recommended defaults', () => {
@@ -60,7 +60,12 @@ describe('SSO config', () => {
 
   it('public config never contains secrets', () => {
     const pub = getPublicConfig(loadSsoConfig({ ...oidcEnv, SSO_DISPLAY_NAME: 'Company SSO' }));
-    expect(pub).toEqual({ enabled: true, protocol: 'oidc', displayName: 'Company SSO' });
+    expect(pub).toEqual({
+      enabled: true,
+      protocol: 'oidc',
+      displayName: 'Company SSO',
+      localLogin: true,
+    });
     expect(JSON.stringify(pub)).not.toContain('super-secret');
   });
 });

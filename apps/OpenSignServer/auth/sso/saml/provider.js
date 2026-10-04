@@ -140,6 +140,7 @@ export function createSamlProvider(samlConfig, { store, fetchMetadata } = {}) {
         emailAttribute: samlConfig.emailAttribute,
         nameAttribute: samlConfig.nameAttribute,
         subjectAttribute: samlConfig.subjectAttribute,
+        groupsAttribute: samlConfig.groupsAttribute,
       });
     },
 

@@ -60,7 +60,7 @@ export function createOidcProvider(oidcConfig, { discover = client.discovery } =
      * Exchange the authorization code and validate everything server-side:
      * state, nonce, PKCE, ID token signature, iss, aud, exp (openid-client), then sub/email.
      */
-    async handleCallback(currentUrl, flow, { requireVerifiedEmail, onIdToken }) {
+    async handleCallback(currentUrl, flow, { requireVerifiedEmail, onIdToken, groupsClaim }) {
       if (!flow?.state || !flow?.nonce || !flow?.codeVerifier) {
         throw new SsoError('INVALID_STATE', 'missing OIDC flow state');
       }
@@ -93,7 +93,11 @@ export function createOidcProvider(oidcConfig, { discover = client.discovery } =
 
       let userinfo = null;
       const serverMeta = cfg.serverMetadata();
-      if ((!claims.email || claims.email_verified === undefined) && serverMeta.userinfo_endpoint) {
+      const needUserinfo =
+        !claims.email ||
+        claims.email_verified === undefined ||
+        (groupsClaim && claims[groupsClaim] === undefined);
+      if (needUserinfo && serverMeta.userinfo_endpoint) {
         try {
           // expectedSubject enforces userinfo.sub === id_token.sub.
           userinfo = await client.fetchUserInfo(cfg, tokens.access_token, claims.sub);
@@ -101,7 +105,7 @@ export function createOidcProvider(oidcConfig, { discover = client.discovery } =
           throw new SsoError('VALIDATION_FAILED', `OIDC userinfo failed: ${err?.message}`);
         }
       }
-      const identity = identityFromClaims(claims, userinfo, { requireVerifiedEmail });
+      const identity = identityFromClaims(claims, userinfo, { requireVerifiedEmail, groupsClaim });
       // Kept server-side only, as id_token_hint for RP-initiated logout.
       onIdToken?.(tokens.id_token);
       return identity;
