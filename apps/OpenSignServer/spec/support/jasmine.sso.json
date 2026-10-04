@@ -1,6 +1,6 @@
 {
-  "spec_dir": "spec/sso",
-  "spec_files": ["**/*[sS]pec.js"],
+  "spec_dir": "spec",
+  "spec_files": ["sso/**/*[sS]pec.js", "security/**/*[sS]pec.js"],
   "stopSpecOnExpectationFailure": false,
   "random": false
 }
