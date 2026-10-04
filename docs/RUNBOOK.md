@@ -290,6 +290,7 @@ dc exec server curl -sS https://sso.example.com/realms/company/.well-known/openi
 | 10 | (Group mapping) A member of `SSO_ADMIN_GROUPS` logs in | Admin menus (Settings → Users) visible; sees all SSO users |
 | 11 | (Group mapping) Remove that person from the group, log out and in | Standard user, no admin menus |
 | 12 | (`LOCAL_LOGIN_ENABLED=false`) Login page and `/addadmin` | Only the SSO button; `/addadmin` is never offered |
+| 14 | (Group mapping) Request signatures → Signers dropdown | Colleagues of the organization are listed without adding them as contacts |
 | 13 | (`LOCAL_LOGIN_ENABLED=false`) Admin opens Settings → Users | No "Add user" button and no "Reset password" action; the Active toggle works |
 
 **Server log events:** `sso.login.initiated`, `sso.user.provisioned`, `sso.login.success`. Failures appear as `sso.login.rejected`, with a `code` and an internal `detail`.

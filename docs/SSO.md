@@ -228,6 +228,12 @@ Set any of these to map IdP groups to OpenSign roles:
 - **Keycloak SAML:** add a "Group list" mapper (attribute `groups`, Single group attribute off).
 - See `docs/sso-test-env/keycloak-setup.sh`.
 
+**Colleagues as signers:**
+- In the shared company organization, "Request signatures" also lists active colleagues, not just the user's own Contactbook.
+- When a colleague is listed, a contact for them is added to the user's Contactbook, linked to the colleague's own account.
+- Colleagues deactivated in OpenSign are hidden.
+- Other organizations keep upstream behaviour.
+
 **Security boundary:** with a mapping, **whoever can change group membership in the IdP controls who is an OpenSign admin**. Restrict and audit group administration in the IdP.
 
 ## Turning off local login (optional)

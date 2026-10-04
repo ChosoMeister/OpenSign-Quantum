@@ -1,3 +1,4 @@
+import { withOrgColleagues } from '../../auth/sso/orgContacts.js';
 // Function to escape special characters in the search string
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special characters
@@ -34,7 +35,9 @@ export default async function getSigners(request) {
     if (request.user) {
       searchObj.CreatedBy = { __type: 'Pointer', className: '_User', objectId: request?.user?.id };
       searchObj.sessionToken = request.user.getSessionToken();
-      return await getContacts(searchObj);
+      const contacts = await getContacts(searchObj);
+      // OpenSign-Quantum: colleagues of the SSO company organization are selectable signers.
+      return await withOrgColleagues(request.user, searchObj.search, contacts);
     } else {
       throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Invalid session token');
     }
