@@ -20,8 +20,6 @@ const isSsoUser = user => Boolean(user?.get?.('ssoSubject'));
 export function ssoUserBeforeSave(request) {
   if (request.master) return;
   const { object, original } = request;
-  // With local login disabled, accounts are created only by SSO provisioning (master key).
-  if (!original) assertLocalAccountsEnabled();
   for (const field of SSO_USER_FIELDS) {
     const changed = original ? object.get(field) !== original.get(field) : object.has(field);
     if (changed) throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Field is read-only.');

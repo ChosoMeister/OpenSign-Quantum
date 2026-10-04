@@ -55,12 +55,13 @@ describe('SSO Parse hooks', () => {
       expect(() => ssoUserBeforePasswordReset({ object: obj({}) })).toThrow();
     });
 
-    it('blocks client-side account creation and local signup/admin functions', () => {
-      expect(() => ssoUserBeforeSave({ object: obj({ username: 'x' }) })).toThrow();
+    it('blocks local signup/admin functions', () => {
       expect(() => assertLocalAccountsEnabled()).toThrow();
-      // SSO provisioning creates users with the master key.
+    });
+
+    it('still allows creating contact/signer accounts (they cannot log in with a password)', () => {
       expect(() =>
-        ssoUserBeforeSave({ master: true, object: obj({ ssoSubject: 's' }) })
+        ssoUserBeforeSave({ object: obj({ username: 'signer@example.com' }) })
       ).not.toThrow();
     });
   });
