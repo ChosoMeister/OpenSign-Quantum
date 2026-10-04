@@ -256,6 +256,7 @@ LOCAL_LOGIN_ENABLED=false
 - All SSO users then join one company organization.
 - Roles are re-evaluated at each login, so a group change applies at the user's next login.
 - With `LOCAL_LOGIN_ENABLED=false` there is no local administrator. Skip A7: the first person in `opensign-admins` who logs in is an admin.
+- In SSO-only mode the Users page has no **Add user** or **Reset password**. New people get access by being added in the IdP; they appear in OpenSign after their first login. Admins can still activate/deactivate users there.
 - Whoever can edit these groups in the IdP controls OpenSign administration. Restrict that right in the IdP.
 
 ## B3. Apply
@@ -289,6 +290,7 @@ dc exec server curl -sS https://sso.example.com/realms/company/.well-known/openi
 | 10 | (Group mapping) A member of `SSO_ADMIN_GROUPS` logs in | Admin menus (Settings → Users) visible; sees all SSO users |
 | 11 | (Group mapping) Remove that person from the group, log out and in | Standard user, no admin menus |
 | 12 | (`LOCAL_LOGIN_ENABLED=false`) Login page and `/addadmin` | Only the SSO button; `/addadmin` is never offered |
+| 13 | (`LOCAL_LOGIN_ENABLED=false`) Admin opens Settings → Users | No "Add user" button and no "Reset password" action; the Active toggle works |
 
 **Server log events:** `sso.login.initiated`, `sso.user.provisioned`, `sso.login.success`. Failures appear as `sso.login.rejected`, with a `code` and an internal `detail`.
 
@@ -343,6 +345,9 @@ Run A8 and B4 again afterwards.
 | Link an existing local account to SSO | With the master key (Parse Dashboard or REST), set `ssoProvider`, `ssoIssuer` and `ssoSubject` on that `_User`. The values are the IdP issuer/entity ID and the user's `sub`/NameID. |
 | Rotate the OIDC client secret | Change it in the IdP and in `.env.sso`, then `dc up -d server` |
 | SAML IdP certificate rollover | `dc restart server` re-reads the metadata |
+| Give someone access (SSO-only) | Create or enable them in the IdP. Their OpenSign account is created at their first SSO login. |
+| Make someone an admin / editor | Add them to the `SSO_ADMIN_GROUPS` / `SSO_EDITOR_GROUPS` group in the IdP; it applies at their next login |
+| Remove admin rights | Remove them from the group in the IdP; they become a standard user at their next login |
 | Change the button text | `SSO_DISPLAY_NAME` in `.env.sso`, then `dc up -d server` |
 
 ## C4. Rollback and emergency

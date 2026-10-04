@@ -15,6 +15,7 @@ import axios from "axios";
 import PasswordResetModal from "../primitives/PasswordResetModal";
 import { usersActions } from "../json/ReportJson";
 import { withSessionValidation } from "../utils";
+import { fetchSsoConfig } from "../utils/sso";
 
 const heading = ["Sr.No", "Name", "Email", "Phone", "Role", "Team", "Active"];
 const UserList = () => {
@@ -98,7 +99,14 @@ const UserList = () => {
   const indexOfLastDoc = currentPage * recordperPage;
   const indexOfFirstDoc = indexOfLastDoc - recordperPage;
   const currentList = userList?.slice(indexOfFirstDoc, indexOfLastDoc);
+  // SSO-only (LOCAL_LOGIN_ENABLED=false): users come from the IdP, so no local
+  // "Add user" and no password reset.
+  const [localAccounts, setLocalAccounts] = useState(true);
+  const userActions = localAccounts
+    ? usersActions
+    : usersActions.filter((act) => act.action !== "resetpassword");
   useEffect(() => {
+    fetchSsoConfig().then((cfg) => setLocalAccounts(cfg?.localLogin !== false));
     fetchUserList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -309,12 +317,14 @@ const UserList = () => {
                       </span>
                     </div>
                     <div className="flex flex-row gap-2 items-center">
-                      <div
-                        className="cursor-pointer"
-                        onClick={() => handleModal("form")}
-                      >
-                        <i className="fa-light fa-square-plus text-accent text-[30px] md:text-[40px]"></i>
-                      </div>
+                      {localAccounts && (
+                        <div
+                          className="cursor-pointer"
+                          onClick={() => handleModal("form")}
+                        >
+                          <i className="fa-light fa-square-plus text-accent text-[30px] md:text-[40px]"></i>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="w-full overflow-x-auto">
@@ -326,7 +336,7 @@ const UserList = () => {
                               {t(`report-heading.${item}`)}
                             </th>
                           ))}
-                          {usersActions?.length > 0 && (
+                          {userActions?.length > 0 && (
                             <th className="p-2 text-transparent pointer-events-none">
                               {t("action")}
                             </th>
@@ -413,8 +423,8 @@ const UserList = () => {
                               {isAdmin && (
                                 <td className="px-3 py-2">
                                   <div className="text-base-content min-w-max flex flex-row gap-x-2 gap-y-1 justify-start items-center">
-                                    {usersActions?.length > 0 &&
-                                      usersActions?.map((act, index) => (
+                                    {userActions?.length > 0 &&
+                                      userActions?.map((act, index) => (
                                         <React.Fragment key={index}>
                                           {handleBtnVisibility(act, item) && (
                                             <div

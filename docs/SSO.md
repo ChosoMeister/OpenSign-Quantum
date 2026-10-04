@@ -236,7 +236,8 @@ Set any of these to map IdP groups to OpenSign roles:
 
 What it does:
 - The login page shows only the SSO button.
-- The server rejects password login, password reset, client-side signup, and the `addadmin` / `usersignup` cloud functions. Admins also cannot create local users via "Add user"; users come from the IdP.
+- The server rejects password login, password reset, client-side signup, and the `addadmin`, `usersignup` and `resetpassword` cloud functions.
+- On the Users page, **Add user** and **Reset password** are hidden. Users come from the IdP and passwords are managed there. Admins can still see users and activate/deactivate them.
 - Administrators come only from `SSO_ADMIN_GROUPS`.
 
 **Emergency access** (IdP down or group mapping broken):
