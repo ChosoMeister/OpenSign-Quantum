@@ -17,6 +17,7 @@ import TemplateBeforeSave from './parsefunction/TemplateBeforesave.js';
 import DocumentBeforeFind from './parsefunction/DocumentAfterFind.js';
 import TemplateAfterFind from './parsefunction/TemplateAfterFind.js';
 import UserAfterFind from './parsefunction/UserAfterFInd.js';
+import ExtUserBeforeSave from './parsefunction/ExtUserBeforeSave.js';
 import {
   ssoUserBeforeSave,
   ssoUserBeforeLogin,
@@ -79,6 +80,8 @@ Parse.Cloud.afterSave('contracts_Teams', TeamsAftersave);
 // This beforeSave function triggers before an object is added or updated in the specified class, allowing for validation or modification.
 Parse.Cloud.beforeSave('contracts_Document', DocumentBeforesave);
 Parse.Cloud.beforeSave('contracts_Template', TemplateBeforeSave);
+// Blocks client-side changes to role/tenant/org/status on contracts_Users.
+Parse.Cloud.beforeSave('contracts_Users', ExtUserBeforeSave);
 
 // This afterFind function triggers after a query retrieves objects from the specified class, allowing for post-processing of the results.
 Parse.Cloud.afterFind(Parse.User, UserAfterFind);

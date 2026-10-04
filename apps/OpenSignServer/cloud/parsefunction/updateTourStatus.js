@@ -7,7 +7,8 @@ export default async function updateTourStatus(request) {
       const updateUser = new Parse.Object('contracts_Users');
       updateUser.id = extUserId;
       updateUser.set('TourStatus', tourstatus);
-      const res = await updateUser.save();
+      // Saved as the caller, so ExtUserBeforeSave only allows updating their own row.
+      const res = await updateUser.save(null, { sessionToken: request.user.getSessionToken() });
       return res;
     } catch (err) {
       console.log('Err ', err);

@@ -113,7 +113,7 @@ export default async function addUser(request) {
           acl.setReadAccess(user.id, true);
           acl.setWriteAccess(user.id, true);
           extUser.setACL(acl);
-          const extUserRes = await extUser.save();
+          const extUserRes = await extUser.save(null, { useMasterKey: true });
 
           const parseData = JSON.parse(JSON.stringify(extUserRes));
           return parseData;
@@ -135,7 +135,7 @@ export default async function addUser(request) {
           acl.setWriteAccess(userRes.id, true);
 
           extUser.setACL(acl);
-          const res = await extUser.save();
+          const res = await extUser.save(null, { useMasterKey: true });
 
           const parseData = JSON.parse(JSON.stringify(res));
           return parseData;
