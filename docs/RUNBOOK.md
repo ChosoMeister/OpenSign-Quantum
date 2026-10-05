@@ -128,6 +128,11 @@ The rest of this runbook uses `dc`.
 2. On a new database you land on **OpenSign setup** (`/addadmin`). Create the administrator with a strong password.
 3. Store these credentials in your password vault. This local account is also the **break-glass** login when SSO is unavailable.
 
+**Planning SSO-only mode** (`LOCAL_LOGIN_ENABLED=false`, Part B)?
+- Still create this account. It is the only way back in if the IdP is unavailable (C4).
+- It lives in its **own organization**, separate from the company organization that SSO users join, so it cannot manage SSO users.
+- Use it only for emergencies. Day-to-day administration happens through `SSO_ADMIN_GROUPS`.
+
 ## A8. Verify Part A
 
 | # | Check | Expected |
@@ -290,8 +295,8 @@ dc exec server curl -sS https://sso.example.com/realms/company/.well-known/openi
 | 10 | (Group mapping) A member of `SSO_ADMIN_GROUPS` logs in | Admin menus (Settings → Users) visible; sees all SSO users |
 | 11 | (Group mapping) Remove that person from the group, log out and in | Standard user, no admin menus |
 | 12 | (`LOCAL_LOGIN_ENABLED=false`) Login page and `/addadmin` | Only the SSO button; `/addadmin` is never offered |
-| 14 | (Group mapping) Request signatures → Signers dropdown | Colleagues of the organization are listed without adding them as contacts |
 | 13 | (`LOCAL_LOGIN_ENABLED=false`) Admin opens Settings → Users | No "Add user" button and no "Reset password" action; the Active toggle works |
+| 14 | (Group mapping) Request signatures → Signers dropdown | Colleagues of the organization are listed without adding them as contacts |
 
 **Server log events:** `sso.login.initiated`, `sso.user.provisioned`, `sso.login.success`. Failures appear as `sso.login.rejected`, with a `code` and an internal `detail`.
 
@@ -300,6 +305,7 @@ dc exec server curl -sS https://sso.example.com/realms/company/.well-known/openi
 - **New employees:** an account is created on first SSO login, with no admin action needed. Without a group mapping everyone is a standard user; with one, the role follows the IdP groups.
 - **"An account with this email already exists":** a local account already uses that email. Accounts are never merged automatically; see C3.
 - **Users disabled in the IdP** cannot log in, and SSO accounts have no local password to fall back on.
+- **Signers:** with a group mapping, colleagues of the organization appear directly in the signer list. External signers are added with "+". They never need a password: they sign through the emailed link and a one-time email code (OTP), also in SSO-only mode.
 
 ---
 
@@ -357,7 +363,7 @@ Run A8 and B4 again afterwards.
 |---|---|
 | IdP outage | Local administrators keep logging in with email and password. SSO users wait for the IdP. |
 | Turn SSO off | Set `SSO_ENABLED=false` (and remove `LOCAL_LOGIN_ENABLED=false`) in `.env.sso`, then `dc up -d server`. The SSO button disappears and data is kept. |
-| SSO-only and the IdP is down or the admin group is broken | Set `LOCAL_LOGIN_ENABLED=true` in `.env.sso`, then `dc up -d server`. Existing local accounts can log in again. |
+| SSO-only and the IdP is down or the admin group is broken | Set `LOCAL_LOGIN_ENABLED=true` in `.env.sso`, then `dc up -d server`. The local admin from A7 can log in again. It belongs to its own organization, not the SSO company organization, so it can sign documents and check the system but cannot manage SSO users. Fix the IdP/group mapping, then set `LOCAL_LOGIN_ENABLED=false` again. |
 | Bad release | `git checkout <previous tag>`, `dc up -d --build`. If the database changed, restore it from C1. |
 
 ## C5. Troubleshooting
