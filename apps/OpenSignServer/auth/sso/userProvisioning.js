@@ -44,6 +44,16 @@ export async function resolveUser(identity, { store, config, correlationId }) {
   if (!ext) throw new SsoError('INTERNAL_ERROR', 'user has no contracts_Users record');
   if (ext.isDisabled) throw new SsoError('USER_DISABLED', 'user disabled in OpenSign');
 
+  // Accounts created before the mapping was enabled live in their own tenant; an admin there
+  // would see no users. Move them into the company organization on their next login.
+  if (mapped && MANAGED_ROLES.includes(ext.role)) {
+    const placement = await ensureCompanyOrg(store, config);
+    if (ext.orgId !== placement.orgId) {
+      await store.moveToOrg(ext.id, placement);
+      ssoLog('sso.user.moved_to_company_org', { correlationId, userId: user.id });
+    }
+  }
+
   if (mapped && ext.role !== role && MANAGED_ROLES.includes(ext.role)) {
     await store.setRole(ext.id, role);
     ssoLog('sso.user.role_changed', {

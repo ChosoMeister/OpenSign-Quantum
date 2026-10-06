@@ -121,6 +121,19 @@ describe('provisioning with group role mapping', () => {
     expect(store.users.length).toBe(1);
   });
 
+  it('moves users created before the mapping into the company organization', async () => {
+    const store = createMemoryStore();
+    // Provisioned without a mapping: own tenant, no organization.
+    const { userId } = await resolveUser(identity([]), {
+      store,
+      config: { ...config, roleMappingEnabled: false },
+    });
+    expect(store.ext.get(userId).orgId).toBeUndefined();
+    const res = await resolveUser(identity(['opensign-admins']), { store, config });
+    expect(res.role).toBe('contracts_Admin');
+    expect(store.ext.get(userId).orgId).toBe(store.orgs[0].orgId);
+  });
+
   it('does not touch roles it does not manage', async () => {
     const store = createMemoryStore();
     const { userId } = await resolveUser(identity([]), { store, config });

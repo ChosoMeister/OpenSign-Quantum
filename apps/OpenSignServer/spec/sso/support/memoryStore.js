@@ -34,8 +34,19 @@ export function createMemoryStore() {
         ssoSubject: identity.subject,
         name: identity.name,
       });
-      ext.set(id, { id: `ext${id}`, role, isDisabled: false, tenantId: placement?.tenantId });
+      ext.set(id, {
+        id: `ext${id}`,
+        role,
+        isDisabled: false,
+        tenantId: placement?.tenantId,
+        orgId: placement?.orgId,
+      });
       return { id };
+    },
+    async moveToOrg(extId, placement) {
+      for (const e of ext.values())
+        if (e.id === extId)
+          Object.assign(e, { tenantId: placement.tenantId, orgId: placement.orgId });
     },
     async setRole(extId, role) {
       for (const e of ext.values()) if (e.id === extId) e.role = role;

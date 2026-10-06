@@ -128,8 +128,20 @@ export const parseStore = {
           role: ext.get('UserRole'),
           isDisabled: ext.get('IsDisabled') === true,
           tenantId: ext.get('TenantId')?.id,
+          orgId: ext.get('OrganizationId')?.id,
         }
       : null;
+  },
+
+  // Moves an existing SSO user into the shared company organization (users provisioned
+  // before the group mapping was enabled have their own tenant and no organization).
+  async moveToOrg(extUserId, placement) {
+    const ext = new Parse.Object('contracts_Users');
+    ext.id = extUserId;
+    ext.set('TenantId', pointer('partners_Tenant', placement.tenantId));
+    ext.set('OrganizationId', pointer('contracts_Organizations', placement.orgId));
+    ext.set('TeamIds', [pointer('contracts_Teams', placement.teamId)]);
+    await ext.save(null, MASTER);
   },
 
   async setRole(extUserId, role) {
