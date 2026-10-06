@@ -154,7 +154,12 @@ const HomeLayout = () => {
     await axios.put(
       serverUrl + "classes/contracts_Users/" + extUserId,
       { TourStatus: updatedTourStatus },
-      { headers: { "X-Parse-Application-Id": appId } }
+      {
+        headers: {
+          "X-Parse-Application-Id": appId,
+          "X-Parse-Session-Token": localStorage.getItem("accesstoken")
+        }
+      }
     );
   };
 
@@ -166,7 +171,8 @@ const HomeLayout = () => {
       const tourStatus = extUser?.TourStatus || [];
       setTourStatusArr(tourStatus);
       const loginTour = tourStatus.find((obj) => obj.loginTour)?.loginTour;
-      setIsTour(!loginTour);
+      // Preferences → "Enable tour: No" turns the dashboard tour off as well.
+      setIsTour(extUser?.IsTourEnabled !== false && !loginTour);
     } else {
       setIsTour(true);
     }
